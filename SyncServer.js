@@ -50,7 +50,7 @@ wa.SyncServer = class SyncServer {
 		if (data !== false && data.requestId && data.type) {
 			if (data.responseId) {
 				// It's a response
-				this.#receiveResponse(data);
+				this.#receiveResponse(event, data);
 			} else {
 				if (this.allowedOrigins.length && !this.allowedOrigins.includes(event.origin)) {
 					console.warn('SyncServer: request origin not allowed', event.origin);
@@ -78,7 +78,6 @@ wa.SyncServer = class SyncServer {
 			responseData.targetWindow = request.sourceWindow;
 			responseData.targetOrigin = request.sourceOrigin;
 			responseData.type = request.type;
-			responseData.time = Date.now();
 			
 			let response = new wa.SyncResponse(responseData);
 			this.#responseCount++;
@@ -118,14 +117,26 @@ wa.SyncServer = class SyncServer {
 		// Handle the request:
 		this.requestHandler(requestData);
     }
-    #receiveResponse(responseData) {
+    #receiveResponse(event, responseData) {
 		// SyncServer working as client, engaging the responder
         if (responseData && responseData.requestId && this.outgoingRequests[responseData.requestId]) {
 			// Response refers to an existing request
 			let request = this.outgoingRequests[responseData.requestId];
-			let elapsed = responseData.time - request.time;
+			// Check that the response comes from the same origin to which the request was sent
+			if (event.origin !== request.targetOrigin) {
+				console.warn('SyncServer: response origin mismatch', 'expected:', request.targetOrigin, 'received:', event.origin);
+				return;
+			}
+			
+			// Optional but recommended: check the source window too
+			if (event.source !== request.targetWindow) {
+				console.warn('SyncServer: response source window mismatch');
+				return;
+			}
+			
+			let elapsed = responseData.time - request.data.time;
 			responseData.roundtrip = elapsed;
-
+			
 			request.status = 'COMPLETE';
 			
 			let keys = Object.keys(this.outgoingRequests);
