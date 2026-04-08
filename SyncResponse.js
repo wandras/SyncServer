@@ -11,7 +11,6 @@ wa.SyncResponse = class SyncResponse {
 		
 		this.requestId = options.requestId;
 		this.type = options.type;
-		this.time = Date.now();
 		
 		this.targetWindow = options.targetWindow;
 		this.targetOrigin = options.targetOrigin;
@@ -24,7 +23,6 @@ wa.SyncResponse = class SyncResponse {
 			requestId: this.requestId,
 			responseId: this.responseId,
 			type: this.type,
-			time: this.time,
 			payload: options.payload
 		};
 	}
@@ -33,6 +31,7 @@ wa.SyncResponse = class SyncResponse {
 	}
 	send() {
 		this.status = 'RESPONSE_PENDING';
+		this.data.time = Date.now();
 		
 		// send the request when the target is ready
 		let stringData = wa.SyncServer.encode(this.data);
